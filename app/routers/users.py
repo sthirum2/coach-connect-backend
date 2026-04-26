@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from app.models.user import User
 from app.schemas.user import UserCreate
+from app.auth0 import verify_token
 
 router = APIRouter()
 
 @router.post("/")
-async def create_user(user_data: UserCreate):
+async def create_user(user_data: UserCreate, token: dict = Depends(verify_token)):
     existing = await User.find_one(User.auth0_id == user_data.auth0_id)
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
@@ -31,8 +32,16 @@ async def get_coach(coach_id: str):
         raise HTTPException(status_code=404, detail="Coach not found")
     return coach
 
+@router.get("/me")
+async def get_me(token: dict = Depends(verify_token)):
+    auth0_id = token["sub"]
+    user = await User.find_one(User.auth0_id == auth0_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
 @router.get("/{auth0_id}")
-async def get_user(auth0_id: str):
+async def get_user(auth0_id: str, token: dict = Depends(verify_token)):
     user = await User.find_one(User.auth0_id == auth0_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
