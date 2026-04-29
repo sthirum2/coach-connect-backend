@@ -50,10 +50,21 @@ async def get_me(token: dict = Depends(verify_token)):
     return d
 
 @router.get('/{auth0_id}')
-async def get_user(auth0_id: str, token: dict = Depends(verify_token)):
+async def get_user(auth0_id: str):
     user = await User.find_one(User.auth0_id == auth0_id)
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
     d = user.dict()
     d['id'] = str(user.id)
     return d
+
+
+@router.get('/students')
+async def get_students():
+    students = await User.find(User.role == 'student').to_list()
+    result = []
+    for s in students:
+        d = s.dict()
+        d['id'] = str(s.id)
+        result.append(d)
+    return result
